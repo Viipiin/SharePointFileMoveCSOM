@@ -1,0 +1,216 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Configuration;
+using SP = Microsoft.SharePoint.Client;
+using System.Security;
+using System.Net;
+
+namespace RepositoryCleanUp
+{
+    class RepoCleanUp
+    {
+        public void SiteConnectivity()
+        {
+            string siteUrl = ConfigurationManager.AppSettings["SiteUrl"];
+            string userName = ConfigurationManager.AppSettings["UserName"];
+            string UATsiteUrl = ConfigurationManager.AppSettings["UATSiteUrl"];
+            string UATuserName = ConfigurationManager.AppSettings["UATUserName"];
+
+            SecureString securePass = GetSecurePassword();
+            SecureString securePassUAT = GetUATSecurePassword();
+            //using (SP.ClientContext siteContext = new SP.ClientContext(UATsiteUrl))
+            using (SP.ClientContext siteContext = new SP.ClientContext(siteUrl))
+            {
+                siteContext.Credentials = new NetworkCredential(userName, securePass);
+                //siteContext.Credentials = new NetworkCredential(UATuserName, securePassUAT);
+                //var query = new SP.CamlQuery();
+                //query.ViewXml = @"<View Scope='RecursiveAll'><Query><Where><Eq><FieldRef Name='FSObjType' /><Value Type='int'>0</Value></Eq></Where></Query></View>";
+
+                SP.List list = siteContext.Web.Lists.GetByTitle("ArtifactsLibrary");
+                //SP.List UATlist = siteContext.Web.Lists.GetByTitle("ArtifactsLibrary");
+                SP.FolderCollection foldersCollection = list.RootFolder.Folders;
+                siteContext.Load(foldersCollection);
+                siteContext.ExecuteQuery();
+                foreach (SP.Folder folder in foldersCollection)
+                {
+                    //Console.WriteLine("Folder Title is :"+folder.Name);
+                    SP.ListItemCollection items = list.GetItems(CreateItemQuery());//FindItemsWithContentType(siteContext,  folder);
+                    siteContext.Load(items, x => x.Where(y => y.ContentType.Name == folder.Name));
+                    siteContext.ExecuteQuery();
+
+
+                    foreach (SP.ListItem item in items)
+                    {
+                        siteContext.Load(item, g => g.ContentType, e => e.File);
+                        siteContext.ExecuteQuery();
+                        if (folder.Name == item.ContentType.Name)
+                        {
+                            Console.WriteLine("Item is outside of Folder:Folder Name is:" + folder.Name + " Item Content Type is :" + item.ContentType.Name + "and Item url" + siteUrl + item.File.ServerRelativeUrl);
+                            // Console.WriteLine("total items are:" + items.Count);
+                            //item.File.MoveTo(folder.ServerRelativeUrl + "/" + item.File.Name, SP.MoveOperations.None);
+                            //Console.WriteLine("Moved Successfully");
+                        }
+                        //Console.WriteLine("Content Type is:" + item.ContentType.Name + " and Item Title is :" + item["Title"] + " and Item ID is :" + item["ID"]);
+                    }
+
+                }
+
+                #region some unused Code
+                //SP.ListItem item = UATlist.GetItemById(5);
+
+                //siteContext.Load(UATlist);
+                //siteContext.Load(col);
+                //siteContext.Load(item.ContentType);
+
+                //SP.Folder rootFolder = UATlist.RootFolder;
+                //SP.ListItemCollection col = UATlist.GetItems(query);
+
+
+
+                //SP.FolderCollection subFolders = UATlist.RootFolder.Folders;
+
+                ////SP.ListItemCollection item =rootFolder;
+                //SP.FileCollection files = rootFolder.Files;
+                //SP.ContentTypeCollection contentCol = UATlist.ContentTypes;
+                //siteContext.Load(contentCol);
+                //siteContext.Load(rootFolder);
+                //siteContext.Load(subFolders);
+                //siteContext.Load(files);
+                //siteContext.Load(col);
+                //siteContext.ExecuteQuery();
+                //foreach (SP.ListItem item in col)
+                //{
+                //    var itemFolder = GetListItemFolder(item);
+                //    Console.WriteLine(itemFolder.Name);
+                //    //siteContext.Load(item.ContentType);
+                //    //siteContext.ExecuteQuery();
+                //    //Console.WriteLine(item.ContentType.Name);
+                //}
+                //string contetType = item.ContentType.Name;
+                //Console.WriteLine("Item content type is :" + contetType);
+
+                //SP.Folder folderNew=item
+                //Console.WriteLine("Contents Type are");
+                //foreach (SP.ContentType content in contentCol)
+                //{
+                //    Console.WriteLine(content.Name);
+
+                //}
+                //Console.WriteLine("Folders Are:");
+                //foreach (SP.Folder folder in subFolders)
+                //{
+
+                //    if (folder.Name == contetType)
+                //    {
+                //        Console.WriteLine("Folder Name is :" + folder.Name + "and contentype name is " + contetType);
+                //    }
+
+
+                //}
+                //Console.WriteLine("Files are:");
+                //foreach (SP.File file in files)
+                //{
+                //    //file.ListItemAllFields.ContentType
+                //    Console.WriteLine("Properties:" + file.Name+"and content type attached with file is :");
+
+                //}
+                //Console.WriteLine("Properties:" + files.Count);
+                //var contentType = item.ContentType.Name;
+
+
+
+                //get current item content type name
+
+
+
+                //SP.List list = siteContext.Web.Lists.GetByTitle("ArtifactsLibrary"); icol => icol.Include(i => i.ContentType)
+
+
+                //siteContext.Load(list);
+                //siteContext.ExecuteQuery();
+                //if (list != null)
+                //{
+                //    SP.CamlQuery query = new SP.CamlQuery();
+                //    query.ViewXml = "";
+                //    SP.ListItemCollection items = list.GetItems(query);
+                //    siteContext.Load(items);
+                //    siteContext.ExecuteQuery();
+
+                //    string sArtifactIds = string.Empty;
+                //    foreach (SP.ListItem item in items)
+                //    {
+                //        if (item.Folder == null)
+                //        {
+                //            Console.WriteLine("Moving the artifact: \t" + item.File.ServerRelativeUrl);
+                //            string strContentType = item.ContentType.Name;
+                //            Console.WriteLine("Content Type of artifact: \t" + strContentType);
+                //        }
+                //    }
+                //}
+
+
+                //Console.WriteLine("the list title is :" + list.Title + list.Id);
+                #endregion
+            }
+        }
+
+        private SP.ListItemCollection FindItemsWithContentType(SP.ClientContext siteContext, SP.Folder contentTypeName)
+        {
+            SP.Web w = siteContext.Web;
+
+            var query = new SP.CamlQuery()
+            {
+                ViewXml = String.Format("<View><Query><Where><Eq><FieldRef Name='ContentType' /><Value Type='Computed'>{0}</Value></Eq></Where></Query></View>", contentTypeName)
+            };
+
+            SP.List olist = w.Lists.GetByTitle("ArtifactsLibrary");
+            SP.ListItemCollection items = olist.GetItems(query);
+
+            siteContext.Load(items);
+            siteContext.ExecuteQuery();
+
+            return items;
+        }
+
+        private SP.CamlQuery CreateItemQuery()
+        {
+            return new SP.CamlQuery()
+            {
+                ViewXml = "<View ><Query><Where><Eq><FieldRef Name=\"FSObjType\" /><Value Type=\"Integer\">0</Value></Eq></Where></Query></View>"
+            };
+        }
+        private static SP.Folder GetListItemFolder(SP.ListItem listItem)
+        {
+            var folderUrl = (string)listItem["FileDirRef"];
+            var parentFolder = listItem.ParentList.ParentWeb.GetFolderByServerRelativeUrl(folderUrl);
+            listItem.Context.Load(parentFolder);
+            listItem.Context.ExecuteQuery();
+            return parentFolder;
+        }
+
+        private SecureString GetUATSecurePassword()
+        {
+            string UATpassword = ConfigurationManager.AppSettings["UATPassword"];
+            var securePassword = new SecureString();
+            foreach (char c in UATpassword)
+            {
+                securePassword.AppendChar(c);
+            }
+            return securePassword;
+        }
+        private static SecureString GetSecurePassword()
+        {
+            string password = ConfigurationManager.AppSettings["Password"];
+            var securePassword = new SecureString();
+            foreach (char c in password)
+            {
+                securePassword.AppendChar(c);
+            }
+            return securePassword;
+        }
+    }
+
+}
