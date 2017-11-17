@@ -45,6 +45,8 @@ namespace SharePointOnlineStuffs
                         if (folder.Name == item.ContentType.Name)
                         {
                             Console.WriteLine("Item is outside of Folder:Folder Name is:" + folder.Name + " Item Content Type is :" + item.ContentType.Name);
+                            item.File.MoveTo(folder.ServerRelativeUrl,SP.MoveOperations.None);
+                            Console.WriteLine("Moved Successfully");
                         }
                         //Console.WriteLine("Content Type is:" + item.ContentType.Name + " and Item Title is :" + item["Title"] + " and Item ID is :" + item["ID"]);
                     }
