@@ -27,16 +27,29 @@ namespace SharePointOnlineStuffs
             {
                 currentContext.Credentials = new SP.SharePointOnlineCredentials(userName, pass);
                 SP.List list = currentContext.Web.Lists.GetByTitle("Artifacts");
-                SP.ListItemCollection items = list.GetItems(CreateItemQuery());
-                currentContext.Load(items);
-                currentContext.ExecuteQuery();
-                foreach (SP.ListItem item in items)
-                {
+                SP.FolderCollection foldersCollection = list.RootFolder.Folders;
 
-                    currentContext.Load(item.ContentType);
-                    currentContext.ExecuteQuery();
-                    Console.WriteLine("Content Type is:" + item.ContentType.Name + " and Item Title is :" + item["Title"] + " and Item ID is :" + item["ID"]);
+                SP.ListItemCollection items = list.GetItems(CreateItemQuery());
+
+                currentContext.Load(items);
+                currentContext.Load(foldersCollection);
+                currentContext.ExecuteQuery();
+                foreach (SP.Folder folder in foldersCollection)
+                {
+                    //Console.WriteLine("Folder Title is :"+folder.Name);
+                    foreach (SP.ListItem item in items)
+                    {
+
+                        currentContext.Load(item.ContentType);
+                        currentContext.ExecuteQuery();
+                        if (folder.Name == item.ContentType.Name)
+                        {
+                            Console.WriteLine("Item is outside of Folder:Folder Name is:" + folder.Name + " Item Content Type is :" + item.ContentType.Name);
+                        }
+                        //Console.WriteLine("Content Type is:" + item.ContentType.Name + " and Item Title is :" + item["Title"] + " and Item ID is :" + item["ID"]);
+                    }
                 }
+
                 Console.ReadLine();
                 //SP.CamlQuery query = new SP.CamlQuery();
                 //SP.Folder folder = list.RootFolder;
